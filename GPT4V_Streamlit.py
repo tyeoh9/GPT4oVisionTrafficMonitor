@@ -1,8 +1,9 @@
 # Importing required packages
-from openai import AzureOpenAI
+import openai
 import streamlit as st
 import base64
 import os
+import requests
 
 # Defining Web cam image details
 image_paths = {
@@ -12,18 +13,10 @@ image_paths = {
     "Web cam # 4": "images/GPT4V_OutOfStock_Image4.jpg"
 }
 
-# Extracting environment variables
-AOAI_API_BASE = os.getenv("OPENAI_API_BASE")
-AOAI_API_KEY = os.getenv("OPENAI_API_KEY")
-AOAI_API_VERSION = os.getenv("OPENAI_API_VERSION")
-AOAI_DEPLOYMENT = os.getenv("OPENAI_API_DEPLOY_VISION")
-
-# Initiating Azure OpenAI client
-client = AzureOpenAI(
-    azure_endpoint = AOAI_API_BASE,
-    api_key = AOAI_API_KEY,
-    api_version = AOAI_API_VERSION
-)
+# Extracting OpenAI environment variables
+API_URL = "https://api.openai.com/v1/chat/completions"
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+openai.api_key = OPENAI_API_KEY
 
 # Defining various variables
 base64_image = None
@@ -32,35 +25,60 @@ current_image_name = None
 analyse_button = False
 if "camera" not in st.session_state:
     st.session_state.camera = None
-    st.snow() # New Year's theme :)
 
-# Defining helper function to call Azure OpenAI endpoint using Python SDK
-def gpt4v_completion(image_path):
+# Defining helper function to call OpenAI API
+def compose_headers(api_key):
+    return {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {api_key}"
+    }
+
+def compose_payload(image_path):
     # Encoding image to base64
     with open(image_path, "rb") as image_file:
         base64_image = base64.b64encode(image_file.read()).decode("utf-8")
 
-    # Calling Azure OpenAI endpoint via Python SDK
-    response = client.chat.completions.create(
-        model = AOAI_DEPLOYMENT, # model = "Azure OpenAI deployment name".
-        messages = [
-            {"role": "system", "content": "You are a useful shop image analyser. You are checking for visible gaps on the shelves to detect an out-of-stock situation. Important: when you detect gaps, you should report details of specific shelves, so that the shop staff can replenish products. Only, and crucially only when all shelves are well stocked, then you can reply with 'Ok' as a single word."},
-            {"role": "user", "content": [  
-                { 
-                    "type": "text", 
-                    "text": "Please, check this shelf image." 
-                },
-                { 
-                    "type": "image_url",
-                    "image_url": {
-                        "url": f"data:image/jpeg;base64,{base64_image}"
+    return {
+        "model": "gpt-4-turbo",
+        "messages": [
+            {
+                "role": "system",
+                "content": (
+                    "You are a helpful shop image analyzer tasked with checking shelf images "
+                    "to detect potential out-of-stock situations. Your primary goals are:"
+                    "\n1. Identify visible gaps on the shelves."
+                    "\n2. Specify which shelves or products need restocking."
+                    "\n3. If all shelves are well-stocked, respond with 'Ok' as a single word."
+                    "\n4. Provide concise, actionable feedback for the shop staff."
+                )
+            },
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": "Please, check this shelf image." # Prompt
+                    },
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": f"data:image/jpeg;base64,{base64_image}"
+                        }
                     }
-                }
-            ]} 
+                ]
+            }
         ],
-        max_tokens = 500
-    )
-    return response.choices[0].message.content
+        "max_tokens": 300
+    }
+
+def prompt_image(api_key, image_path):
+    headers = compose_headers(api_key=api_key)
+    payload = compose_payload(image_path=image_path)
+    response = requests.post(url=API_URL, headers=headers, json=payload).json()
+
+    if 'error' in response:
+        raise ValueError(response['error']['message'])
+    return response['choices'][0]['message']['content']
 
 # Creating sidebar with instructions
 st.sidebar.header("Instructions:")
@@ -106,7 +124,7 @@ if col1.button("Analyse"):
 # If the analysis button is clicked, use GPT-4V to analyse the image
 if analyse_button and current_image is not None:
     my_bar = st.progress(50, text="Processing your image. Please wait...")
-    result = gpt4v_completion(current_image)
+    result = prompt_image(OPENAI_API_KEY, current_image)
     my_bar.progress(100)
     result_placeholder.text(
         f"Image analysis results for {current_image_name}:\n{result}"
