@@ -8,7 +8,8 @@ import requests
 # Defining Web cam image details
 image_paths = {
     "Web cam # 1": "images/GPT4V_OutOfStock_Image1.jpg",
-    "Web cam # 2": "images/GPT4V_OutOfStock_Image2.jpg",
+    # "Web cam # 2": "images/GPT4V_OutOfStock_Image2.jpg",
+    "Web cam # 2": "images/shelf2.jpg",
     "Web cam # 3": "images/GPT4V_OutOfStock_Image3.jpg",
     "Web cam # 4": "images/GPT4V_OutOfStock_Image4.jpg"
 }
@@ -39,17 +40,22 @@ def compose_payload(image_path):
         base64_image = base64.b64encode(image_file.read()).decode("utf-8")
 
     return {
-        "model": "gpt-4-turbo",
+        # "model": "gpt-4-turbo",
+        "model": "gpt-4o",
         "messages": [
             {
                 "role": "system",
                 "content": (
-                    "You are a helpful shop image analyzer tasked with checking shelf images "
-                    "to detect potential out-of-stock situations. Your primary goals are:"
-                    "\n1. Identify visible gaps on the shelves."
-                    "\n2. Specify which shelves or products need restocking."
-                    "\n3. If all shelves are well-stocked, respond with 'Ok' as a single word."
-                    "\n4. Provide concise, actionable feedback for the shop staff."
+                    "You analyze shelf images for stock levels and detect which shelves need restocking. "
+                    "Rules:\n"
+                    "1. Shelves are numbered from bottom to top (0, 1, 2, ...).\n"
+                    "2. Stock levels:\n"
+                    "   - Well-stocked: >80% full.\n"
+                    "   - Partially stocked: 30%-80% full.\n"
+                    "   - Empty: <30% full.\n"
+                    "3. Respond:\n"
+                    "   - For each shelf, state whether it is well stocked, partially stocked, or empty.\n"
+                    "   - Do it in this format: 'Shelf 0: Well stocked Shelf 1: Partially stocked ...'"
                 )
             },
             {
@@ -79,6 +85,15 @@ def prompt_image(api_key, image_path):
     if 'error' in response:
         raise ValueError(response['error']['message'])
     return response['choices'][0]['message']['content']
+
+def parse_response(response):
+    # response = response.split('Shelf ')[1:]
+    # response = [item.removesuffix('\n').strip() for item in response]
+    # response_dict = {item.split(': ')[0]: item.split(': ')[1] for item in response}
+    # return response_dict
+    reponse = response.strip().split('\n')  # Split the string by newlines and remove extra whitespace
+    response_list = [shelf.split(': ')[1].strip('.').strip() for shelf in reponse]
+    return response_list
 
 # Creating sidebar with instructions
 st.sidebar.header("Instructions:")
@@ -129,3 +144,4 @@ if analyse_button and current_image is not None:
     result_placeholder.text(
         f"Image analysis results for {current_image_name}:\n{result}"
     )
+    print(parse_response(result)) # For debugging
