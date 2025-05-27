@@ -98,14 +98,14 @@ result_placeholder = result_container.empty()
 for image_name, image_path in image_paths.items():
     # If the cam button is clicked, load the image and display it in the second column
     if col1.button(image_name):
-        image_placeholder.image(image=image_path, caption=image_name, use_column_width=True)
+        image_placeholder.image(image=image_path, caption=image_name, use_container_width=True)
         current_image = image_path
         current_image_name = image_name
         st.session_state.camera = image_name
         analyze_button = False
     # If the analysis button is clicked, preserve the last selected image
     elif st.session_state.camera == image_name:
-        image_placeholder.image(image=image_path, caption=image_name, use_column_width=True)
+        image_placeholder.image(image=image_path, caption=image_name, use_container_width=True)
         current_image = image_path
         current_image_name = image_name
         st.session_state.camera = image_name
