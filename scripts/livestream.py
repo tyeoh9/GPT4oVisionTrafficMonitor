@@ -1,5 +1,5 @@
 '''
-Get snapshot of latest livestream and save it
+Get snapshot of latest livestream and save it to /images folder
 '''
 
 # TODO:
