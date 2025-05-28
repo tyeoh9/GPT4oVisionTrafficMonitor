@@ -10,6 +10,7 @@ import os
 import requests
 from scripts.webcams import fetch_webcam_data
 from scripts.saveImage import save_image
+from google.cloud import storage
 
 # Defining Web cam image details
 CALTRANS_URL = "https://cwwp2.dot.ca.gov/vm/streamlist.htm"
@@ -21,6 +22,9 @@ for cam in webcam_data:
 # Extracting OpenAI environment variables
 API_URL = "https://api.openai.com/v1/chat/completions"
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+# Get rid of whitespace
+if OPENAI_API_KEY:
+    OPENAI_API_KEY = OPENAI_API_KEY.strip()
 openai.api_key = OPENAI_API_KEY
 
 # Defining various variables
@@ -33,15 +37,26 @@ if "camera" not in st.session_state:
 
 # Defining helper function to call OpenAI API
 def compose_headers(api_key):
+    if not api_key:
+        raise ValueError("OPENAI API key is missing or empty")
     return {
         "Content-Type": "application/json",
         "Authorization": f"Bearer {api_key}"
     }
 
+def download_image_bytes(image_url):
+    # Parse bucket name and filename
+    bucket_name = "traffic-monitor-images"
+    file_name = image_url.split("/")[-1]
+
+    client = storage.Client()
+    bucket = client.bucket(bucket_name)
+    blob = bucket.blob(file_name)
+    return blob.download_as_bytes()
+
 def compose_payload(image_path):
-    # Encoding image to base64
-    with open(image_path, "rb") as image_file:
-        base64_image = base64.b64encode(image_file.read()).decode("utf-8")
+    image_bytes = download_image_bytes(image_path)
+    base64_image = base64.b64encode(image_bytes).decode("utf-8")
 
     return {
         "model": "gpt-4o",
@@ -117,10 +132,10 @@ with col1:
 
     # Save the image if the camera data was found
     if selected_cam_data:
-        save_image(selected_cam_data)
+        image_url = save_image(selected_cam_data)
 
     # Update session state camera and image paths
-    current_image = image_paths[selected_camera]
+    current_image = image_url
     current_image_name = selected_camera
     st.session_state.camera = selected_camera
 
@@ -128,12 +143,16 @@ with col1:
         analyze_button = True
 
 # Only render image in col2 *after* a selection is made and the image exists
-if current_image and os.path.exists(current_image):
-    image_placeholder.image(
-        image=current_image,
-        caption=current_image_name,
-        use_container_width=True
-    )
+if current_image:
+    try:
+        image_bytes = download_image_bytes(current_image)
+        image_placeholder.image(
+            image_bytes,
+            caption=current_image_name,
+            use_container_width=True
+        )
+    except Exception as e:
+        image_placeholder.error(f"Could not load image: {e}")
 else:
     image_placeholder.empty()
 
