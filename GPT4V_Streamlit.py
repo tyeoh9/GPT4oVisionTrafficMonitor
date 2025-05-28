@@ -4,7 +4,8 @@ import streamlit as st
 import base64
 import os
 import requests
-from scripts.webcams import fetch_webcam_data 
+from scripts.webcams import fetch_webcam_data
+from scripts.saveImage import save_image
 
 # Defining Web cam image details
 CALTRANS_URL = "https://cwwp2.dot.ca.gov/vm/streamlist.htm"
@@ -103,6 +104,16 @@ with col1:
         list(image_paths.keys()),
         index=list(image_paths.keys()).index(st.session_state.camera) if st.session_state.camera else 0
     )
+
+    # Extract the cam ID from the selected image path
+    selected_cam_id = os.path.basename(image_paths[selected_camera]).replace('.jpg', '')
+
+    # Find the corresponding cam dictionary
+    selected_cam_data = next((cam for cam in webcam_data if cam['id'] == selected_cam_id), None)
+
+    # Save the image if the camera data was found
+    if selected_cam_data:
+        save_image(selected_cam_data)
 
     # Update session state camera and image paths
     current_image = image_paths[selected_camera]
