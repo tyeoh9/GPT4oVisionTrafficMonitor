@@ -1,6 +1,5 @@
 venv/
 images/
 scripts/__pycache__/
-scripts/twilio.py/
 __pycache__/
 .gitignore
