@@ -4,11 +4,14 @@ import streamlit as st
 import base64
 import os
 import requests
+from scripts.webcams import fetch_webcam_data 
 
 # Defining Web cam image details
-image_paths = {
-    "Web cam # 1": "images/example.jpg",
-}
+CALTRANS_URL = "https://cwwp2.dot.ca.gov/vm/streamlist.htm"
+webcam_data = fetch_webcam_data(CALTRANS_URL)
+image_paths = {}
+for cam in webcam_data:
+    image_paths[f"{cam['nearby_place']}, {cam['cam_name']}"] = f"images/{cam['id']}.jpg"
 
 # Extracting OpenAI environment variables
 API_URL = "https://api.openai.com/v1/chat/completions"
@@ -94,25 +97,30 @@ image_placeholder = col2.empty()
 result_container = st.container()
 result_placeholder = result_container.empty()
 
-# Creating button for each Web cam in the first column
-for image_name, image_path in image_paths.items():
-    # If the cam button is clicked, load the image and display it in the second column
-    if col1.button(image_name):
-        image_placeholder.image(image=image_path, caption=image_name, use_container_width=True)
-        current_image = image_path
-        current_image_name = image_name
-        st.session_state.camera = image_name
-        analyze_button = False
-    # If the analysis button is clicked, preserve the last selected image
-    elif st.session_state.camera == image_name:
-        image_placeholder.image(image=image_path, caption=image_name, use_container_width=True)
-        current_image = image_path
-        current_image_name = image_name
-        st.session_state.camera = image_name
+with col1:
+    selected_camera = st.selectbox(
+        "Select a Web Cam:",
+        list(image_paths.keys()),
+        index=list(image_paths.keys()).index(st.session_state.camera) if st.session_state.camera else 0
+    )
 
-# Creating analysis button in the first column
-if col1.button("Analyze"):
-    analyze_button = True
+    # Update session state camera and image paths
+    current_image = image_paths[selected_camera]
+    current_image_name = selected_camera
+    st.session_state.camera = selected_camera
+
+    if st.button("Analyze"):
+        analyze_button = True
+
+# Only render image in col2 *after* a selection is made and the image exists
+if current_image and os.path.exists(current_image):
+    image_placeholder.image(
+        image=current_image,
+        caption=current_image_name,
+        use_container_width=True
+    )
+else:
+    image_placeholder.empty()
 
 # If the analysis button is clicked, use GPT-4V to analyze the image
 if analyze_button and current_image is not None:
