@@ -2,10 +2,6 @@
 Get snapshot of latest livestream and save it to /images folder
 '''
 
-# TODO:
-# 1. Change hardcoded url
-# 2. Change saved img location/name
-
 import requests
 import re
 from bs4 import BeautifulSoup
