@@ -1,3 +1,7 @@
+'''
+Runs the Traffic Monitor Assistant Streamlit app
+'''
+
 # Importing required packages
 import openai
 import streamlit as st
