@@ -12,6 +12,7 @@ pip install --upgrade openai
 - [Part 1: Configuring solution environment](https://github.com/tyeoh9/GPT4oVisionTrafficMonitor?tab=readme-ov-file#part-1-configuring-solution-environment)
 - [Part 2: Web app - User Guide](https://github.com/tyeoh9/GPT4oVisionTrafficMonitor?tab=readme-ov-file#part-2-web-app---user-guide)
 - [Part 3: Web app - Developer Guide](https://github.com/tyeoh9/GPT4oVisionTrafficMonitor?tab=readme-ov-file#part-3-web-app---developer-guide)
+- [Notes & Acknowledgements](https://github.com/tyeoh9/GPT4oVisionTrafficMonitor?tab=readme-ov-file#notes-&-acknowledgements)
 
 ## Part 1: Configuring solution environment
 1. To use API key, you need to first obtain a key from [openai.com](https://openai.com). There are many ways to use the key safely, but a common way to do it (on Mac) is to store the key as a temporary environment variable, like so:
